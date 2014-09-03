@@ -18,9 +18,7 @@
 @interface AIObservable ()
 
 @property (strong, nonatomic) NSHashTable* observers;
-@property (strong, nonatomic) NSHashTable* pendingAdds;
-@property (strong, nonatomic) NSHashTable* pendingRemoves;
-@property (nonatomic) BOOL notifying;
+@property (strong, nonatomic) dispatch_queue_t queue;
 
 @end
 
@@ -31,60 +29,45 @@
 	self = [super init];
 	if (self) {
 		self.observers = [NSHashTable weakObjectsHashTable];
-		self.pendingAdds = [NSHashTable weakObjectsHashTable];
-		self.pendingRemoves = [NSHashTable weakObjectsHashTable];
+        self.queue = dispatch_queue_create("AIObservable", DISPATCH_QUEUE_SERIAL);
 	}
 	return self;
 }
 
 - (void)addObserver:(id<NSObject>)observer {
-	if (self.notifying) {
-		// The main set cannot be mutated while iterating, add to a secondary set
-		// to be processed when the iteration finishes
-		[self.pendingRemoves removeObject:observer];
-		[self.pendingAdds addObject:observer];
-	} else {
-		[self.observers addObject:observer];
-	}
+    dispatch_async(self.queue, ^() {
+        [self.observers addObject:observer];
+    });
 }
 
 - (void)removeObserver:(id<NSObject>)observer {
-	if (self.notifying) {
-		// The main set cannot be mutated while iterating, add to a secondary set
-		// to be processed when the iteration finishes
-		[self.pendingAdds removeObject:observer];
-		[self.pendingRemoves addObject:observer];
-	} else {
-		[self.observers removeObject:observer];
-	}
+    dispatch_async(self.queue, ^() {
+        [self.observers removeObject:observer];
+    });
 }
 
 - (BOOL)containsObserver:(id<NSObject>)observer {
-	return ([self.observers containsObject:observer] && ![self.pendingRemoves containsObject:observer]) ||
-		[self.pendingAdds containsObject:observer];
+    BOOL __block result;
+    dispatch_sync(self.queue, ^() {
+        result = [self.observers containsObject:observer];
+    });
+    return result;
 }
 
 - (void)notifyObservers:(NSInvocation*)invocation {
-	self.notifying = YES;
-	for (id<NSObject> observer in self.observers) {
-		if (![self.pendingRemoves containsObject:observer] && [observer respondsToSelector:[invocation selector]]) {
-			[invocation setTarget:observer];
-			[invocation invoke];
-		}
-	}
-	self.notifying = NO;
-	[self commitPending];
+    dispatch_sync(self.queue, ^() {
+        for (id<NSObject> observer in self.observers) {
+            [self notifyObserver:observer withInvocation:invocation];
+        }
+    });
 }
 
-- (void)commitPending {
-	NSAssert(!self.notifying, @"Tried to commit pending observers while notifying");
-	for (id<NSObject> observer in self.pendingRemoves)
-		[self.observers removeObject:observer];
-	[self.pendingRemoves removeAllObjects];
+- (void)notifyObserver:(id)observer withInvocation:(NSInvocation*)invocation {
+    if (![observer respondsToSelector:invocation.selector])
+        return;
 
-	for (id<NSObject> observer in self.pendingAdds)
-		[self.observers addObject:observer];
-	[self.pendingAdds removeAllObjects];
+    [invocation setTarget:observer];
+    [invocation invoke];
 }
 
 @end

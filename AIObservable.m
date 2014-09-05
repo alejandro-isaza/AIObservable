@@ -26,27 +26,29 @@
 @implementation AIObservable
 
 - (id)init {
-	self = [super init];
-	if (self) {
-		self.observers = [NSHashTable weakObjectsHashTable];
+    self = [super init];
+    if (self) {
+        self.observers = [NSHashTable hashTableWithOptions:NSPointerFunctionsWeakMemory | NSPointerFunctionsOpaquePersonality];
         self.queue = dispatch_queue_create("AIObservable", DISPATCH_QUEUE_SERIAL);
-	}
-	return self;
+    }
+    return self;
 }
 
-- (void)addObserver:(id<NSObject>)observer {
+- (void)addObserver:(id)observer {
     dispatch_async(self.queue, ^() {
         [self.observers addObject:observer];
     });
 }
 
-- (void)removeObserver:(id<NSObject>)observer {
+- (void)removeObserver:(id)observer {
+    // This will cause a crash when called from the observer's dealloc unless we force the compiler to treat it as a raw pointer
+    void* rawObserver = (__bridge void*)observer;
     dispatch_async(self.queue, ^() {
-        [self.observers removeObject:observer];
+        [self.observers removeObject:(__bridge id)rawObserver];
     });
 }
 
-- (BOOL)containsObserver:(id<NSObject>)observer {
+- (BOOL)containsObserver:(id)observer {
     BOOL __block result;
     dispatch_sync(self.queue, ^() {
         result = [self.observers containsObject:observer];
@@ -56,7 +58,7 @@
 
 - (void)notifyObservers:(NSInvocation*)invocation {
     dispatch_sync(self.queue, ^() {
-        for (id<NSObject> observer in self.observers) {
+        for (id observer in self.observers) {
             [self notifyObserver:observer withInvocation:invocation];
         }
     });

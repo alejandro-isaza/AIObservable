@@ -22,9 +22,9 @@
  */
 @interface AIObservable : NSObject
 
-- (void)addObserver:(id<NSObject>)observer;
-- (void)removeObserver:(id<NSObject>)observer;
-- (BOOL)containsObserver:(id<NSObject>)observer;
+- (void)addObserver:(id)observer;
+- (void)removeObserver:(id)observer;
+- (BOOL)containsObserver:(id)observer;
 
 - (void)notifyObservers:(NSInvocation*)invocation;
 

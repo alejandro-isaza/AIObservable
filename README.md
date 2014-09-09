@@ -15,9 +15,6 @@ For more (somewhat outdated) information see the [blog post](http://a-coding.com
 As an eample suppose you have a chat room. The chat room object dispatches obseravable events when messages are added and people join and leave the room.
 
 ```objc
-#import <AIObservable.h>
-#import <NSInvocation+AIConstructors.h>
-
 @class AIMessage;
 @class AIUser;
 @protocol AIChatRoomObserver;
@@ -47,6 +44,9 @@ As an eample suppose you have a chat room. The chat room object dispatches obser
 As you can see everything has a clear intent and the observer methods are self-documenting. Here is the implementation:
 
 ```objc
+#import <AIObservable.h>
+#import <NSInvocation+AIConstructors.h>
+
 @interface AIChatRoom ()
 
 // We use composition but you could also use inheritance

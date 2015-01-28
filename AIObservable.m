@@ -41,10 +41,11 @@
 }
 
 - (void)removeObserver:(id)observer {
-    // This will cause a crash when called from the observer's dealloc unless we force the compiler to treat it as a raw pointer
-    void* rawObserver = (__bridge void*)observer;
+    // You can't use strong or weak pointers if the observer is already in the dealloc phase (i.e. removeObserver:
+    // is called from the observer's dealloc method). It will cause a crash.
+    id __unsafe_unretained unretainedObserver = observer;
     dispatch_async(self.queue, ^() {
-        [self.observers removeObject:(__bridge id)rawObserver];
+        [self.observers removeObject:unretainedObserver];
     });
 }
 
@@ -59,7 +60,9 @@
 - (void)notifyObservers:(NSInvocation*)invocation {
     dispatch_sync(self.queue, ^() {
         for (id observer in self.observers) {
-            [self notifyObserver:observer withInvocation:invocation];
+            dispatch_async(dispatch_get_main_queue(), ^() {
+                [self notifyObserver:observer withInvocation:invocation];
+            });
         }
     });
 }

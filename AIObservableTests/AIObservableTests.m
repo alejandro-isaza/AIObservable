@@ -70,14 +70,12 @@
 @property (weak, nonatomic) AIObservable* observable;
 @property (weak, nonatomic) ObservableTest_Observer* observerToRemove;
 @property (nonatomic) BOOL notified;
-@property (nonatomic) BOOL observerToRemoveWasNotified;
 @end
 
 @implementation ObservableTest_RemovingObserver
 
 - (void)notification {
 	self.notified = YES;
-	self.observerToRemoveWasNotified = self.observerToRemove.notified;
 	[self.observable removeObserver:self.observerToRemove];
 }
 
@@ -114,8 +112,9 @@
 	
 	[observable addObserver:observer];
 	[observable notifyObservers:[NSInvocation invocationWithProtocol:@protocol(ObservableTest_ObserverProtocol)
-															selector:@selector(notification)]];
-	
+                                                            selector:@selector(notification)]];
+    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, NO);
+
 	XCTAssertTrue(observer.notified, @"The observer should have been notified");
 }
 
@@ -131,7 +130,8 @@
 													selector:@selector(notificationWithInt:)];
 	int i = 3;
 	[inv setArgument:&i atIndex:2];
-	[observable notifyObservers:inv];
+    [observable notifyObservers:inv];
+    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, NO);
 	
 	// 'observer1' does not implement the optional method, so it should not be notified
 	XCTAssertFalse(observer1.notified, @"The first observer should not have been notified");
@@ -146,7 +146,8 @@
 	[observable addObserver:observer1];
 	[observable addObserver:observer2];
 	[observable notifyObservers:[NSInvocation invocationWithProtocol:@protocol(ObservableTest_ObserverProtocol)
-															selector:@selector(notification)]];
+                                                            selector:@selector(notification)]];
+    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, NO);
 	
 	// Both observers are notified
 	XCTAssertTrue(observer1.notified, @"The first observer should have been notified");
@@ -156,7 +157,8 @@
 	observer2.notified = NO;
 	[observable removeObserver:observer1];
 	[observable notifyObservers:[NSInvocation invocationWithProtocol:@protocol(ObservableTest_ObserverProtocol)
-															selector:@selector(notification)]];
+                                                            selector:@selector(notification)]];
+    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, NO);
 	
 	// After removing 'observer2' it is no longer notified
 	XCTAssertFalse(observer1.notified, @"The removed observer should not have been notified");
@@ -175,12 +177,13 @@
 	[observable addObserver:removingObserver];
 	[observable addObserver:observer];
 	[observable notifyObservers:[NSInvocation invocationWithProtocol:@protocol(ObservableTest_ObserverProtocol)
-															selector:@selector(notification)]];
+                                                            selector:@selector(notification)]];
+    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, NO);
 	
-	// The order of the notifications cannot be guaranteed, but either the observer was notified before it was removed
-	// or it was not notified at all.
-	XCTAssertTrue(removingObserver.observerToRemoveWasNotified || !observer.notified, @"Observer should have been removed");
-	XCTAssertTrue(removingObserver.notified, @"Removing observer should have been notified");
+	// Both observers should be notified but afterwards 'observer' should be removed fron the observable
+    XCTAssertTrue(removingObserver.notified, @"Removing observer should have been notified");
+    XCTAssertTrue(observer.notified, @"Observer should have been notified");
+    XCTAssertTrue(![observable containsObserver:observer]);
 }
 
 - (void)testLiveAddition {
@@ -194,7 +197,8 @@
 	
 	[observable addObserver:addingObserver];
 	[observable notifyObservers:[NSInvocation invocationWithProtocol:@protocol(ObservableTest_ObserverProtocol)
-															selector:@selector(notification)]];
+                                                            selector:@selector(notification)]];
+    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, NO);
 	
 	// 'observer' is not notified on the first run, it was just added
 	XCTAssertFalse(observer.notified, @"The added observer should not have been notified");
@@ -202,7 +206,8 @@
 	
 	addingObserver.notified = NO;
 	[observable notifyObservers:[NSInvocation invocationWithProtocol:@protocol(ObservableTest_ObserverProtocol)
-															selector:@selector(notification)]];
+                                                            selector:@selector(notification)]];
+    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, NO);
 	
 	// But it's notified on the second run
 	XCTAssertTrue(observer.notified, @"The added observer should have been notified");

@@ -55,6 +55,7 @@
 }
 
 - (void)notifyObservers:(NSInvocation*)invocation {
+    [invocation retainArguments];
     dispatch_sync(self.queue, ^() {
         for (id observer in self.observers) {
             dispatch_async(dispatch_get_main_queue(), ^() {

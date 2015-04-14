@@ -1,6 +1,6 @@
 # AIObservable
 
-The `AIObservable` class lets you to dispatch events to a list of observers. It's an implementation of the *Observer* design pattern. You can add and remove observers even within the notification callback and from multiple threads or queues. Observers are similar to delegates but you can have multiple of them.
+The `AIObservable` class lets you to dispatch events to a list of observers. It's an implementation of the *Observer* design pattern. You can add and remove observers even within the notification callback and from multiple threads or queues.
 
 This implementation has a few advantages over `NSNotificationCenter`:
 * You don't need to call `removeObserver:` on the observer's dealloc, `AIObservable` uses zeroing weak references.
@@ -8,6 +8,9 @@ This implementation has a few advantages over `NSNotificationCenter`:
 * Each observable object keeps its own set of observers. This makes it easier to debug.
 * I like having an observer protocol for each class that is observable. A protocol allows you to better document each event that the observable class can dispatch and what parameters it has. It also gives meaningul names to the methods. For instance `collection:didAddObject:atIndex:` as opposed to `didAddObject:(NSNotification*)notification`.
 
+## Known Issues
+
+`AIObservable` is currently not (fully) compatible with Swift because Swift doesn't support invocations. I don't have any plans to fix this on this project as it would require a completly different approach. You can still use it in Swift but your classes (both observers and observables) need to inherit from `NSObject`.
 
 ## Example
 
